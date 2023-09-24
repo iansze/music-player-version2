@@ -1,8 +1,14 @@
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router";
 import { RootState } from "../redux/store";
-import { useGetArtistSummaryQuery, useGetSongDetailsQuery } from "../redux/services/spotify";
+import {
+  useGetArtistSummaryQuery,
+  useGetRelatedArtistQuery,
+  useGetShaZamSongDetailsQuery,
+  useGetSongDetailsQuery,
+  useGetSongDetailsV2Query,
+} from "../redux/services/spotify";
 import { DetailsHeader, Loader } from "../components";
 import { playPause, setActiveSong } from "../redux/features/playerSlice";
 import { SongList } from "../components/SongList";
@@ -11,14 +17,43 @@ import { Track } from "../components/Types/Track";
 
 interface SongDetailsProps {}
 
+//716767500
 const SongDetails: FC<SongDetailsProps> = () => {
   const dispatch = useDispatch();
-  const { songid } = useParams();
+  const { songId } = useParams();
   const { isPlaying } = useSelector((state: RootState) => state.player);
 
-  const { data: songData, isFetching: isFetchingSong } = useGetSongDetailsQuery(songid);
+  const { data: relatedArtistData, isFetching: isFetchingRelatedArtist } =
+    useGetRelatedArtistQuery(songId);
 
-  const artistId = songData?.artists[0]?.adamid;
+  const { data: shazamSongData, isFetching: isFetchingShazamSong } =
+    useGetShaZamSongDetailsQuery(songId);
+
+  const { data: songData, isFetching: isFetchingSong } = useGetSongDetailsQuery(songId);
+
+  const { data: songDataV2, isFetching: isFetchingSongV2 } = useGetSongDetailsV2Query(songId);
+
+  let artistId = "";
+  let data = "";
+
+  //Because the API is not consistent, we have to check for the data in different ways
+  if (songDataV2 && !isFetchingSongV2 && !songDataV2.errors) {
+    artistId = songDataV2?.data[0]?.relationships?.artists?.data[0]?.id;
+    data = songDataV2;
+  } else if (shazamSongData && !isFetchingShazamSong && !shazamSongData.errors) {
+    artistId =
+      shazamSongData?.resources?.["shazam-songs"]?.[songId]?.relationships?.artists?.data[0]?.id;
+    data = shazamSongData;
+  }
+  //
+  else if (songData && !isFetchingSong && Object.keys(songData).length > 0) {
+    artistId = songData?.artists[0]?.adamid;
+    data = songData;
+  } else if (relatedArtistData && !isFetchingRelatedArtist && !relatedArtistData.errors) {
+    artistId = relatedArtistData.data[0].id;
+    data = relatedArtistData;
+  }
+
   const { data: artistData, isFetching: isFetchingArtist } = useGetArtistSummaryQuery(artistId);
 
   if (isFetchingSong || isFetchingArtist) return <Loader title="Loading..." />;
@@ -45,17 +80,17 @@ const SongDetails: FC<SongDetailsProps> = () => {
   };
 
   const artistName = artistData?.resources?.artists?.[artistId]?.attributes?.name;
-  const relatedSongIds = artistData?.resources?.songs;
 
   return (
     <div className="flex flex-col">
-      <DetailsHeader song={songData} />
+      <DetailsHeader song={data} songId={songId} />
+
       <div className="mb-10">
         <h2 className="text-white text-3xl font-bold">Lyrics: </h2>
       </div>
       <div className="">
-        {songData?.sections[1]?.text ? (
-          songData?.sections[1]?.text?.map((lyrics: string, index: number) => (
+        {songData?.resources?.lyrics?.text ? (
+          songData?.resources?.lyrics?.text.map((lyrics: string, index: number) => (
             <p key={index} className="text-white text-lg">
               {lyrics}
             </p>
@@ -64,15 +99,17 @@ const SongDetails: FC<SongDetailsProps> = () => {
           <p className="mb-5 text-white text-lg">No lyrics found</p>
         )}
       </div>
-
-      <SongList
-        relatedSongIds={relatedSongIds}
-        isPlaying={isPlaying}
-        handlePauseClick={handlePauseClick}
-        handlePlayClick={handlePlayClick}
-        title={`More by ${artistName}`}
-        linkTo={"/random-songs"}
-      />
+      {artistId && (
+        <SongList
+          data={data}
+          artistId={artistId}
+          isPlaying={isPlaying}
+          handlePauseClick={handlePauseClick}
+          handlePlayClick={handlePlayClick}
+          title={`More by ${artistName}`}
+          linkTo={`/songs/${songData?.id}`}
+        />
+      )}
     </div>
   );
 };

@@ -11,10 +11,10 @@ import {
   SongDetails,
   RandomSongs,
 } from "./pages/index";
-import { AnyAction } from "redux";
+import { RootState } from "./redux/store";
 
 const App = () => {
-  const { activeSong } = useSelector((state: AnyAction) => state.player);
+  const { activeSong } = useSelector((state: RootState) => state.player);
 
   return (
     <div className="relative flex">
@@ -31,7 +31,7 @@ const App = () => {
               <Route path="/random-songs" element={<RandomSongs />} />
               <Route path="/around-you" element={<AroundYou />} />
               <Route path="/artists/:id" element={<ArtistDetails />} />
-              <Route path="/songs/:songid" element={<SongDetails />} />
+              <Route path="/songs/:songId" element={<SongDetails />} />
               <Route path="/search/:searchTerm" element={<Search />} />
             </Routes>
           </div>

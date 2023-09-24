@@ -58,8 +58,6 @@ const RandomSong: FC<RandomSongProps> = () => {
       songUri = item.attributes.previews[0].url;
       songKey = item.id;
     }
-    console.log("hub songKey" + songKey);
-    console.log("attributes songKey" + songKey);
     dispatch(setActiveSong({ song: songUri, track: item, i: songKey, songId: songKey }));
     dispatch(playPause(true));
   };
@@ -69,6 +67,7 @@ const RandomSong: FC<RandomSongProps> = () => {
       <div className="xl:ml-6 ml-0 xl:mb-0 mb-6 flex-1 xl:max-w-[500px] max-w-full flex flex-col">
         <SongList
           tracks={randomSongs}
+          artistId=""
           isPlaying={isPlaying}
           handlePauseClick={handlePauseClick}
           handlePlayClick={handlePlayClick}
